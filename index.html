@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Stronghold Style Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e8dcc0; --panel:#f4ecd6; --panel2:#e2d3ac; --ink:#2e2416; --muted:#6d5c3e;
+    --line:#b49b62; --accent:#7a4a1e; --accent2:#4a6b2f; --gold:#a87b12; --red:#9c3324;
+    --btn:#fff8e6; --btn-line:#a68a4e; --chip:#efe3c2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17130d; --panel:#241d12; --panel2:#2d2416; --ink:#ecdfc2; --muted:#b3a37f;
+      --line:#5d4c2a; --accent:#d99a4e; --accent2:#9dc06a; --gold:#e0b84f; --red:#e07a5f;
+      --btn:#332917; --btn-line:#6d5830; --chip:#2d2416;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.45}
+  button,[role="button"],select,input{min-height:2.25rem}
+  button{font-family:inherit;cursor:pointer}
+  .wrap{max-width:1240px;margin:0 auto;padding:10px 12px 28px}
+  h1{font-family:'VT323',monospace;font-size:clamp(28px,4.5vw,42px);margin:4px 0 0;letter-spacing:.5px;line-height:1}
+  .sub{color:var(--muted);font-style:italic;margin:2px 0 10px;font-size:14px}
+  /* HUD */
+  .hud{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;z-index:20;background:var(--bg);padding:6px 0}
+  .chip{background:var(--chip);border:2px solid var(--line);padding:4px 9px;font-family:'VT323',monospace;font-size:18px;line-height:1.15;min-width:86px}
+  .chip small{display:block;font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  .chip.warn{border-color:var(--red);color:var(--red)}
+  .popface{font-size:15px}
+  /* Layout */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 348px;gap:12px;align-items:start}
+  @media (max-width:900px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:2px solid var(--line);box-shadow:3px 3px 0 rgba(60,40,10,.18)}
+  .card h2{font-family:'VT323',monospace;font-size:22px;margin:0;padding:8px 12px 4px;line-height:1.1}
+  .card .body{padding:6px 12px 12px}
+  /* Map */
+  .mapwrap{padding:8px}
+  #map{width:100%;height:auto;display:block;image-rendering:pixelated;background:#6f9e3e;border:2px solid var(--line);touch-action:manipulation}
+  .mapbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 4px 2px}
+  .mapbar .date{font-family:'VT323',monospace;font-size:21px;margin-right:auto}
+  .sbtn{background:var(--btn);border:2px solid var(--btn-line);padding:4px 12px;font-family:'VT323',monospace;font-size:18px;color:var(--ink)}
+  .sbtn.on{background:var(--accent);color:#fff8e6;border-color:var(--accent)}
+  .banner{display:none;margin:8px 4px 0;padding:8px 10px;border:2px solid var(--red);color:var(--red);font-weight:bold;background:rgba(156,51,36,.08)}
+  .banner.show{display:block}
+  .hint{font-size:13px;color:var(--muted);padding:4px 4px 0}
+  /* Tabs */
+  .tabs{display:flex;gap:0;border-bottom:2px solid var(--line)}
+  .tab{flex:1;background:var(--panel2);border:none;border-right:2px solid var(--line);font-family:'VT323',monospace;font-size:18px;padding:8px 2px;color:var(--ink)}
+  .tab:last-child{border-right:none}
+  .tab.on{background:var(--panel);color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+  .pane{display:none;padding:10px 12px 12px}
+  .pane.on{display:block}
+  .pane h3{font-family:'VT323',monospace;font-size:19px;margin:10px 0 4px;color:var(--accent)}
+  .pane h3:first-child{margin-top:0}
+  .pane p{margin:4px 0;font-size:14px}
+  /* Build grid */
+  .buildgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .bbtn{display:flex;gap:8px;align-items:flex-start;text-align:left;background:var(--btn);border:2px solid var(--btn-line);padding:6px;color:var(--ink)}
+  .bbtn.on{border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+  .bbtn:disabled{opacity:.45;cursor:not-allowed}
+  .sw{width:26px;height:26px;flex:0 0 26px;border:2px solid rgba(0,0,0,.25);margin-top:2px}
+  .bbtn b{font-size:14px;display:block;line-height:1.2}
+  .bbtn span{font-size:12px;color:var(--muted);display:block;line-height:1.3}
+  .cost{font-family:'VT323',monospace;font-size:15px;color:var(--gold)}
+  /* Sliders & rows */
+  .seg{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+  .seg button{background:var(--btn);border:2px solid var(--btn-line);padding:4px 9px;font-size:13px;color:var(--ink)}
+  .seg button.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+  .rowline{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .rowline span:last-child{font-family:'VT323',monospace;font-size:17px;white-space:nowrap}
+  .pos{color:var(--accent2)} .neg{color:var(--red)}
+  .bigbtn{width:100%;background:var(--accent);color:#fff8e6;border:2px solid var(--accent);font-family:'VT323',monospace;font-size:20px;padding:8px;margin:6px 0}
+  .bigbtn:disabled{opacity:.45}
+  .ghostbtn{width:100%;background:var(--btn);color:var(--ink);border:2px solid var(--btn-line);font-family:'VT323',monospace;font-size:18px;padding:6px;margin:4px 0}
+  /* Estates */
+  .estate{border:2px solid var(--line);background:var(--panel2);padding:8px 10px;margin:0 0 8px}
+  .estate b{font-size:15px}
+  .estate p{font-size:13px;margin:3px 0}
+  .estate button{background:var(--btn);border:2px solid var(--btn-line);padding:5px 10px;font-size:13px;color:var(--ink);margin:2px 4px 2px 0}
+  .estate button:disabled{opacity:.45}
+  .tag{display:inline-block;font-family:'VT323',monospace;font-size:14px;padding:0 6px;border:1px solid var(--line);background:var(--chip)}
+  /* Log & lists */
+  .log{list-style:none;margin:0;padding:0;font-size:13.5px}
+  .log li{padding:4px 0;border-bottom:1px dashed var(--line)}
+  .log li:first-child{font-weight:bold}
+  .goals{list-style:none;margin:0;padding:0;font-size:14px}
+  .goals li{padding:4px 0 4px 24px;position:relative;border-bottom:1px dashed var(--line)}
+  .goals li::before{content:"○";position:absolute;left:4px}
+  .goals li.done{color:var(--muted)}
+  .goals li.done::before{content:"●";color:var(--accent2)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+  .foodgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .food{background:var(--chip);border:2px solid var(--line);padding:5px 8px;font-size:13.5px}
+  .food b{font-family:'VT323',monospace;font-size:18px;font-weight:normal}
+  footer{color:var(--muted);font-size:13px;margin-top:14px;font-style:italic}
+  .selected-info{font-size:13.5px;min-height:20px;padding:2px 4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Emberhold</h1>
+  <p class="sub">A Stronghold 2 style pixel lordship: run the economy, feed your people well, earn honour, keep crime down, and hold the walls when raiders come.</p>
+
+  <div class="hud" id="hud"></div>
+
+  <div class="layout">
+    <div>
+      <div class="card mapwrap">
+        <canvas id="map" width="840" height="540"></canvas>
+        <div class="banner" id="raidBanner"></div>
+        <div class="mapbar">
+          <span class="date" id="dateLabel">Spring, Year 1</span>
+          <button class="sbtn" id="btnPause">❚❚ Pause</button>
+          <button class="sbtn on" id="btnPlay">► Play</button>
+          <button class="sbtn" id="btnFast">►► Fast</button>
+        </div>
+        <div class="selected-info" id="selInfo">Pick a building on the right, then click a green tile to place it. Click any building to see what it does.</div>
+        <p class="hint">Woodcutters work best beside woods. Quarries must sit next to grey stone. Farms like open grass. Walls and towers are your raid defence, guard posts fight crime and raiders both.</p>
+      </div>
+
+      <div class="cols">
+        <div class="card">
+          <h2>The Granary</h2>
+          <div class="body">
+            <div class="foodgrid" id="foodGrid"></div>
+            <div id="foodNote" style="font-size:13.5px;margin-top:6px"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Chronicle</h2>
+          <div class="body"><ul class="log" id="log"></ul></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h2>Lord's Ambitions</h2>
+        <div class="body"><ul class="goals" id="goals"></ul></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab on" data-tab="build">Build</button>
+        <button class="tab" data-tab="rule">Rule</button>
+        <button class="tab" data-tab="estates">Estates</button>
+        <button class="tab" data-tab="honour">Feast</button>
+      </div>
+
+      <div class="pane on" id="pane-build">
+        <div class="buildgrid" id="buildGrid"></div>
+        <button class="ghostbtn" id="btnDemolish">Demolish mode: off</button>
+        <p>New peasants arrive at the keep when popularity is 60 or better and there is a spare bed. Every building needs workers, so houses come first, always.</p>
+        <div id="jobsBox"></div>
+      </div>
+
+      <div class="pane" id="pane-rule">
+        <h3>Taxes</h3>
+        <div class="seg" id="taxSeg"></div>
+        <h3>Rations</h3>
+        <div class="seg" id="rationSeg"></div>
+        <h3>Why your people feel as they do</h3>
+        <div id="popBreakdown"></div>
+        <h3>Crime &amp; punishment</h3>
+        <div id="crimeBox"></div>
+        <p>Crime climbs when folk are hungry, overtaxed or idle. Guard posts catch thieves, the stocks make an example of them, and a caught thief sometimes raises a cheer.</p>
+        <h3>The garrison</h3>
+        <div id="garrisonBox"></div>
+        <button class="ghostbtn" id="btnKnight">Recruit a knight (50 gold, 5 honour)</button>
+      </div>
+
+      <div class="pane" id="pane-estates">
+        <p>Outlying villages swear to your banner for <b>honour</b>, then send carts of goods to your stockpile every few days. Upgrade an estate and its carts grow heavier.</p>
+        <div id="estateList"></div>
+      </div>
+
+      <div class="pane" id="pane-honour">
+        <h3>Honour: <span id="honourBig">0</span></h3>
+        <p>Honour is earned by good rule, not bought. A staffed church grants honour each month while popularity stays above 60. Feasts are the fast road.</p>
+        <button class="bigbtn" id="btnFeast">Hold a Lord's Feast</button>
+        <p id="feastReq" style="font-size:13.5px"></p>
+        <h3>Spend honour on</h3>
+        <p>Claiming estates (Estates tab), recruiting knights (Rule tab), and one vanity every lord deserves:</p>
+        <button class="ghostbtn" id="btnJoust">Hold a joust (40 honour, +popularity)</button>
+        <div id="honourBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Emberhold is a sandbox lordship. There is no final screen: grow the village, claim all three estates, and see how grand a hold you can keep happy through the winters and the raids.</footer>
+</div>
+
+<script>
+"use strict";
+/* ============ DATA ============ */
+var TILE = 30, COLS = 28, ROWS = 18;
+var FOODS = ["bread","apples","cheese","meat"];
+var FOODNAMES = {bread:"Bread", apples:"Apples", cheese:"Cheese", meat:"Meat"};
+var TAXES = [
+  {name:"No tax",  per:0,    pop:8},
+  {name:"Low",     per:0.02, pop:3},
+  {name:"Fair",    per:0.05, pop:0},
+  {name:"High",    per:0.09, pop:-10},
+  {name:"Cruel",   per:0.14, pop:-22}
+];
+var RATIONS = [
+  {name:"None",   mult:0,   pop:-30},
+  {name:"Half",   mult:0.5, pop:-12},
+  {name:"Normal", mult:1,   pop:0},
+  {name:"Extra",  mult:1.5, pop:10},
+  {name:"Double", mult:2,   pop:18}
+];
+var B = {
+  house:    {name:"Hovel",        w:20,s:0, g:0, workers:0, color:"#b5763a", roof:"#7c3f21", desc:"Beds for 6 peasants."},
+  wheat:    {name:"Wheat Farm",   w:15,s:0, g:0, workers:2, color:"#d9b84a", roof:"#a8832a", desc:"Bakes bread, the backbone food.", prod:{bread:3.4}},
+  orchard:  {name:"Apple Orchard",w:15,s:0, g:0, workers:2, color:"#7fae4c", roof:"#4a6b2f", desc:"Apples: a second food for variety.", prod:{apples:2.8}},
+  dairy:    {name:"Dairy Farm",   w:20,s:0, g:0, workers:2, color:"#e8e0cc", roof:"#8a6f4d", desc:"Cheese: slow, rich, keeps well.", prod:{cheese:2.2}},
+  hunter:   {name:"Hunter's Hut", w:15,s:0, g:0, workers:1, color:"#8a5a33", roof:"#5d3a1e", desc:"Meat from the woods. Best near trees.", prod:{meat:2.0}},
+  woodcutter:{name:"Woodcutter", w:10,s:0, g:0, workers:2, color:"#6d4c2a", roof:"#3f2a14", desc:"Fells trees for wood. Best beside woods.", prod:{wood:3.0}},
+  quarry:   {name:"Quarry",       w:15,s:0, g:0, workers:3, color:"#9a9a94", roof:"#6e6e68", desc:"Cuts stone. Must sit beside stone.", prod:{stone:2.2}},
+  granary:  {name:"Granary",      w:20,s:5, g:0, workers:0, color:"#c8a24a", roof:"#8a5f1e", desc:"+150 food storage."},
+  stockpile:{name:"Stockpile",    w:15,s:0, g:0, workers:0, color:"#a08050", roof:"#6d4c2a", desc:"+150 wood & stone storage."},
+  market:   {name:"Market",       w:25,s:0, g:10, workers:1, color:"#b84a6e", roof:"#7c2544", desc:"Sells surplus food for gold."},
+  church:   {name:"Church",       w:30,s:10,g:0, workers:1, color:"#ddd6c2", roof:"#5a6b8a", desc:"+8 popularity. Monthly honour if folk are content."},
+  inn:      {name:"Inn",          w:30,s:5, g:0, workers:1, color:"#c47b3a", roof:"#7c3f21", desc:"+8 popularity. Eats a little bread & meat."},
+  guard:    {name:"Guard Post",   w:20,s:5, g:0, workers:2, color:"#7a7f8a", roof:"#454a54", desc:"Cuts crime, adds 4 defence."},
+  stocks:   {name:"The Stocks",   w:10,s:0, g:0, workers:0, color:"#8a6f4d", roof:"#5d3a1e", desc:"Punishes caught thieves. Cuts crime."},
+  wall:     {name:"Stone Wall",   w:0, s:2, g:0, workers:0, color:"#a8a49a", roof:"#7e7a70", desc:"+1 defence. Slow raiders at the edge."},
+  tower:    {name:"Watch Tower",  w:10,s:15,g:0, workers:0, color:"#8f8b82", roof:"#5a4632", desc:"+6 defence. Archers rain arrows."}
+};
+var BUILD_ORDER = ["house","wheat","orchard","dairy","hunter","woodcutter","quarry","granary","stockpile","market","church","inn","guard","stocks","wall","tower"];
+
+/* ============ STATE ============ */
+var S = {
+  day: 1, speed: 1, selected: null, demolish: false,
+  gold: 130, wood: 90, stone: 25, honour: 20,
+  food: {bread: 45, apples: 30, cheese: 0, meat: 12},
+  pop: 12, popularity: 65, crime: 8, knights: 0,
+  tax: 2, ration: 2, feastGlow: 0, joustGlow: 0, raidScar: 0,
+  nextRaid: 55, raidWarned: false, raidStrength: 0,
+  producedToday: 0, eatenToday: 0, thievesCaught: 0,
+  buildings: [], estates: [], log: []
+};
+/* Terrain: 0 grass, 1 forest, 2 stone, 3 water */
+var TER = [];
+(function(){
+  for (var y=0;y<ROWS;y++){ TER.push([]); for (var x=0;x<COLS;x++) TER[y].push(0); }
+  function blob(cx,cy,r,v){ for(var y=0;y<ROWS;y++)for(var x=0;x<COLS;x++){ var d=Math.sqrt((x-cx)*(x-cx)+(y-cy)*(y-cy)); if(d<r-((x*7+y*13)%3)*0.4) TER[y][x]=v; } }
+  blob(3,3,3.4,1); blob(5,1,2.2,1); blob(24,2,2.6,1); blob(2,15,2.8,1);
+  blob(25,9,2.4,2); blob(23,12,1.8,2);
+  blob(13,17,4.5,3); blob(20,17,3,3);
+})();
+function addB(type,x,y){ S.buildings.push({type:type,x:x,y:y}); }
+/* Starting village around the keep at (13,8) */
+addB("granary",11,7); addB("stockpile",15,7);
+addB("house",11,10); addB("house",15,10);
+addB("wheat",9,9); addB("woodcutter",6,5); addB("orchard",17,9);
+S.estates = [
+  {id:"mill", name:"Millbrook", desc:"A farming village down the lane. Sends bread and apples.", cost:60, owned:false, lvl:1, timer:6, sends:{bread:10, apples:6}},
+  {id:"stone", name:"Stonecroft", desc:"Quarry folk under the grey hill. Sends stone and wood.", cost:90, owned:false, lvl:1, timer:8, sends:{stone:8, wood:10}},
+  {id:"river", name:"Riverford", desc:"Traders and herders on the river. Sends cheese, meat and a little gold.", cost:120, owned:false, lvl:1, timer:10, sends:{cheese:6, meat:6, gold:8}}
+];
+function log(msg){ S.log.unshift("Day " + S.day + ": " + msg); if (S.log.length>9) S.log.pop(); renderLog(); }
+log("You take up the lordship of Emberhold. Twelve souls, a keep, and high hopes.");
+log("Tip: a second food type is worth more than a second farm of the same kind.");
+
+/* ============ HELPERS ============ */
+function $(id){ return document.getElementById(id); }
+function count(type){ var n=0; for (var i=0;i<S.buildings.length;i++) if(S.buildings[i].type===type) n++; return n; }
+function buildingAt(x,y){ for (var i=0;i<S.buildings.length;i++) if(S.buildings[i].x===x&&S.buildings[i].y===y) return S.buildings[i]; return null; }
+function isKeep(x,y){ return (x===13||x===14)&&(y===7||y===8); }
+function totalFood(){ return S.food.bread+S.food.apples+S.food.cheese+S.food.meat; }
+function foodTypes(){ var n=0; for(var i=0;i<FOODS.length;i++) if(S.food[FOODS[i]]>=3) n++; return n; }
+function foodCap(){ return 200 + count("granary")*150; }
+function resCap(){ return 220 + count("stockpile")*150; }
+function housing(){ return count("house")*6 + 4; }
+function nearTiles(x,y,v,dist){ for(var dy=-dist;dy<=dist;dy++)for(var dx=-dist;dx<=dist;dx++){ var nx=x+dx,ny=y+dy; if(nx>=0&&ny>=0&&nx<COLS&&ny<ROWS&&TER[ny][nx]===v) return true; } return false; }
+function jobsTotal(){ var n=0; for(var i=0;i<S.buildings.length;i++) n+=B[S.buildings[i].type].workers; return n; }
+function defence(){ return count("tower")*6 + count("wall")*1 + count("guard")*4 + S.knights*8; }
+function fmt(n){ return Math.floor(n); }
+
+/* Popularity: recomputed every day */
+function calcPopularity(){
+  var parts = [];
+  parts.push({label:"Baseline", v:50});
+  parts.push({label:"Taxes ("+TAXES[S.tax].name+")", v:TAXES[S.tax].pop});
+  var r = RATIONS[S.ration];
+  if (totalFood()<=0 && S.pop>0){ parts.push({label:"No food at all", v:-30}); }
+  else parts.push({label:"Rations ("+r.name+")", v:r.pop});
+  var ft = foodTypes();
+  var variety = ft===0?-20 : ft===1?0 : ft===2?8 : ft===3?16 : 24;
+  parts.push({label:"Food variety ("+ft+" of 4 foods)", v:variety});
+  if (count("church")>0) parts.push({label:"Church", v:8});
+  if (count("inn")>0) parts.push({label:"Inn & ale", v:8});
+  var idle = Math.max(0, S.pop - jobsTotal());
+  if (idle>=4) parts.push({label:"Idle hands ("+idle+" jobless)", v:-Math.min(12, idle)});
+  if (S.pop > housing()) parts.push({label:"Sleeping rough (not enough hovels)", v:-15});
+  if (S.crime>=55) parts.push({label:"Thieves in the night", v:-10});
+  if (S.feastGlow>0) parts.push({label:"Still glowing from the feast", v:12});
+  if (S.joustGlow>0) parts.push({label:"Talking about the joust", v:8});
+  if (S.raidScar>0) parts.push({label:"Shaken by the last raid", v:-10});
+  var sum=0; for(var i=0;i<parts.length;i++) sum+=parts[i].v;
+  return {total: Math.max(0,Math.min(100,sum)), parts:parts};
+}
+
+/* ============ SIMULATION ============ */
+function tick(){
+  S.day++;
+  var capF = foodCap(), capR = resCap();
+  /* Staffing: food jobs first, then the rest */
+  var order = S.buildings.slice().sort(function(a,b){
+    var pa = B[a.type].prod && (B[a.type].prod.bread||B[a.type].prod.apples||B[a.type].prod.cheese||B[a.type].prod.meat) ? 0 : 1;
+    var pb = B[b.type].prod && (B[b.type].prod.bread||B[b.type].prod.apples||B[b.type].prod.cheese||B[b.type].prod.meat) ? 0 : 1;
+    return pa-pb;
+  });
+  var workersLeft = S.pop, staffed = {};
+  for (var i=0;i<order.length;i++){
+    var need = B[order[i].type].workers;
+    var got = Math.min(need, workersLeft); workersLeft -= got;
+    staffed[S.buildings.indexOf(order[i])] = need===0 ? 1 : got/need;
+  }
+  S.producedToday = 0;
+  for (var j=0;j<S.buildings.length;j++){
+    var b = S.buildings[j], def = B[b.type], eff = staffed[j]||0;
+    if (!def.prod || eff<=0) continue;
+    var mult = 1;
+    if (b.type==="woodcutter" && nearTiles(b.x,b.y,1,2)) mult = 1.6;
+    if (b.type==="hunter" && nearTiles(b.x,b.y,1,2)) mult = 1.6;
+    for (var k in def.prod){
+      var amt = def.prod[k]*eff*mult;
+      if (k==="wood") S.wood = Math.min(capR, S.wood+amt);
+      else if (k==="stone") S.stone = Math.min(capR, S.stone+amt);
+      else { S.food[k] = Math.min(capF, S.food[k]+amt); S.producedToday += amt; }
+    }
+  }
+  /* Market sells surplus */
+  if (count("market")>0){
+    var types = FOODS.filter(function(f){ return S.food[f]>25; });
+    if (types.length){
+      var f0 = types[0]; S.food[f0]-=2; S.gold += 3;
+    }
+  }
+  /* Inn eats a little */
+  if (count("inn")>0){ S.food.bread=Math.max(0,S.food.bread-0.4); S.food.meat=Math.max(0,S.food.meat-0.3); }
+  /* Eating: spread across whatever is in the granary */
+  var want = S.pop * 0.16 * RATIONS[S.ration].mult;
+  S.eatenToday = 0;
+  if (want>0){
+    var avail = FOODS.filter(function(f){ return S.food[f]>0; });
+    if (!avail.length){ /* starvation handled in popularity + migration */ }
+    else {
+      var per = want/avail.length, guard=0;
+      while (want>0.01 && guard<40){
+        guard++;
+        avail = FOODS.filter(function(f){ return S.food[f]>0; });
+        if (!avail.length) break;
+        per = want/avail.length;
+        for (var a=0;a<avail.length;a++){
+          var take = Math.min(per, S.food[avail[a]]);
+          S.food[avail[a]]-=take; S.eatenToday+=take; want-=take;
+        }
+      }
+    }
+  }
+  /* Taxes */
+  S.gold += S.pop * TAXES[S.tax].per;
+  /* Church honour, monthly (every 10 days) */
+  var popNow = calcPopularity();
+  S.popularity = popNow.total;
+  if (S.day%10===0 && count("church")>0 && S.popularity>=60){
+    S.honour += 2; log("The church bell rings over contented folk. +2 honour.");
+  }
+  if (S.day%10===0 && S.popularity>=70){
+    S.honour += 1;
+  }
+  /* Crime */
+  var idleN = Math.max(0, S.pop - jobsTotal());
+  var crimePush = (S.popularity<45 ? 2.2 : S.popularity<55 ? 0.8 : -0.6)
+    + (idleN>=4 ? 0.8 : 0) + (totalFood()<=0 ? 1.2 : 0)
+    - count("guard")*0.9 - count("stocks")*0.7 - (S.popularity>=75 ? 0.5 : 0);
+  S.crime = Math.max(0, Math.min(100, S.crime + crimePush));
+  if (S.crime>50 && Math.random()<0.10){
+    var caught = count("guard")>0 && Math.random()<0.65;
+    if (caught){
+      S.thievesCaught++;
+      S.crime = Math.max(0, S.crime-18);
+      if (count("stocks")>0){ S.feastGlow = Math.max(S.feastGlow, 2); log("Guards caught a thief and the stocks did the rest. The village approves."); }
+      else log("Guards caught a thief red-handed with your grain.");
+    } else {
+      var stolen = Math.min(S.gold, 6+Math.floor(Math.random()*10));
+      S.gold -= stolen;
+      var sf = FOODS[Math.floor(Math.random()*4)];
+      var sfAmt = Math.min(S.food[sf], 5+Math.floor(Math.random()*6));
+      S.food[sf] -= sfAmt;
+      log("A thief slipped the watch and took " + stolen + " gold and " + sfAmt + " " + FOODNAMES[sf].toLowerCase() + ". Build guard posts.");
+    }
+  }
+  /* Estates ship goods */
+  for (var e=0;e<S.estates.length;e++){
+    var es = S.estates[e];
+    if (!es.owned) continue;
+    es.timer--;
+    if (es.timer<=0){
+      es.timer = 11 - Math.min(4, es.lvl);
+      var parts=[];
+      for (var key in es.sends){
+        var amt2 = Math.round(es.sends[key] * (1 + (es.lvl-1)*0.6));
+        if (key==="gold") S.gold+=amt2;
+        else if (key==="wood") S.wood=Math.min(capR,S.wood+amt2);
+        else if (key==="stone") S.stone=Math.min(capR,S.stone+amt2);
+        else S.food[key]=Math.min(capF,S.food[key]+amt2);
+        parts.push(amt2+" "+(FOODNAMES[key]||key));
+      }
+      log("A cart from " + es.name + " arrived: " + parts.join(", ") + ".");
+    }
+  }
+  /* Migration */
+  if (S.feastGlow>0) S.feastGlow--;
+  if (S.joustGlow>0) S.joustGlow--;
+  if (S.raidScar>0) S.raidScar--;
+  if (S.popularity>=60 && S.pop < housing() && Math.random()<0.45){
+    S.pop++; log("A peasant family arrived at the keep gate, drawn by your good name.");
+  } else if (S.popularity<35 && S.pop>4 && Math.random()<0.3){
+    S.pop--; log("A family packed a cart and left in the night. Popularity is too low.");
+  } else if (totalFood()<=0 && S.pop>4 && Math.random()<0.25){
+    S.pop--; log("Hunger drove a family away. Get food growing, fast.");
+  }
+  /* Raids */
+  if (S.day === S.nextRaid-5){
+    S.raidStrength = 6 + Math.floor(S.pop/4) + Math.floor(Math.random()*6) + count("tower");
+    S.raidWarned = true;
+    log("Scouts report riders on the road. A raid is coming in about five days. Defence now: " + defence() + ".");
+  }
+  if (S.day >= S.nextRaid){
+    resolveRaid();
+    S.nextRaid = S.day + 45 + Math.floor(Math.random()*20);
+    S.raidWarned = false;
+  }
+  render();
+}
+function resolveRaid(){
+  var d = defence(), s = S.raidStrength || 8;
+  if (d >= s){
+    var loot = 15 + Math.floor(Math.random()*20);
+    S.gold += loot; S.honour += 8;
+    log("Raiders broke against your defences and fled. You seized " + loot + " gold from their camp. +8 honour.");
+  } else {
+    var goldLost = Math.min(S.gold, Math.floor(S.gold*0.25)+5);
+    var foodLost = Math.min(totalFood(), 12+Math.floor(Math.random()*12));
+    S.gold -= goldLost;
+    var left = foodLost;
+    for (var i=0;i<FOODS.length && left>0;i++){ var t=Math.min(S.food[FOODS[i]], Math.ceil(left/2)); S.food[FOODS[i]]-=t; left-=t; }
+    S.raidScar = 8;
+    log("Raiders got in. They took " + goldLost + " gold and about " + foodLost + " food before your folk drove them off. More walls, towers and guards next time.");
+  }
+}
+
+/* ============ RENDER: HUD & PANELS ============ */
+function renderHUD(){
+  var ft = foodTypes();
+  var popCls = S.popularity<35 ? " warn" : "";
+  var foodCls = totalFood()<S.pop ? " warn" : "";
+  var crimeCls = S.crime>=55 ? " warn" : "";
+  var face = S.popularity>=75 ? "Adored" : S.popularity>=60 ? "Content" : S.popularity>=45 ? "Uneasy" : S.popularity>=30 ? "Angry" : "Furious";
+  $("hud").innerHTML =
+    chip("Gold", fmt(S.gold), "") +
+    chip("Wood", fmt(S.wood)+" / "+resCap(), "") +
+    chip("Stone", fmt(S.stone)+" / "+resCap(), "") +
+    chip("Food", fmt(totalFood())+" / "+foodCap(), foodCls) +
+    chip("Food types", ft+" of 4", ft<2?" warn":"") +
+    chip("People", S.pop+" / "+housing()+" beds", S.pop>=housing()?" warn":"") +
+    chip("Popularity", S.popularity+" · "+face, popCls) +
+    chip("Honour", fmt(S.honour), "") +
+    chip("Crime", Math.round(S.crime)+"%", crimeCls) +
+    chip("Defence", defence(), "");
+  function chip(label, val, cls){ return '<div class="chip'+cls+'"><small>'+label+'</small>'+val+'</div>'; }
+}
+function renderFood(){
+  var html="";
+  for (var i=0;i<FOODS.length;i++){
+    var f=FOODS[i];
+    html += '<div class="food">'+FOODNAMES[f]+'<br><b>'+fmt(S.food[f])+'</b>'+(S.food[f]<3?' · <span style="color:var(--red)">out</span>':'')+'</div>';
+  }
+  $("foodGrid").innerHTML = html;
+  var ft = foodTypes();
+  $("foodNote").innerHTML = "Eating about <b>"+S.eatenToday.toFixed(1)+"</b> a day, farms making about <b>"+S.producedToday.toFixed(1)+"</b>. " +
+    (ft>=3 ? "A varied table: your people love it." : ft===2 ? "Two foods on the table. A third would lift spirits further." : "One food, eaten every day, wears folk down. Add a different farm.");
+}
+function renderLog(){
+  $("log").innerHTML = S.log.map(function(m){ return "<li>"+m+"</li>"; }).join("");
+}
+function renderJobs(){
+  var idle = Math.max(0, S.pop - jobsTotal());
+  $("jobsBox").innerHTML = "<h3 style='font-family:VT323,monospace;font-size:19px;color:var(--accent)'>The workforce</h3>" +
+    '<div class="rowline"><span>Jobs to fill</span><span>'+jobsTotal()+'</span></div>' +
+    '<div class="rowline"><span>Idle hands</span><span>'+idle+'</span></div>' +
+    '<div class="rowline"><span>Knights</span><span>'+S.knights+'</span></div>';
+}
+function renderPopularity(){
+  var p = calcPopularity();
+  $("popBreakdown").innerHTML = p.parts.map(function(x){
+    return '<div class="rowline"><span>'+x.label+'</span><span class="'+(x.v>=0?'pos':'neg')+'">'+(x.v>0?'+':'')+x.v+'</span></div>';
+  }).join("") + '<div class="rowline"><span><b>Total popularity</b></span><span>'+p.total+'</span></div>';
+}
+function renderCrimeGarrison(){
+  $("crimeBox").innerHTML =
+    '<div class="rowline"><span>Crime level</span><span>'+Math.round(S.crime)+'%</span></div>' +
+    '<div class="rowline"><span>Guard posts</span><span>'+count("guard")+'</span></div>' +
+    '<div class="rowline"><span>Stocks built</span><span>'+count("stocks")+'</span></div>' +
+    '<div class="rowline"><span>Thieves caught</span><span>'+S.thievesCaught+'</span></div>';
+  $("garrisonBox").innerHTML =
+    '<div class="rowline"><span>Walls</span><span>'+count("wall")+'</span></div>' +
+    '<div class="rowline"><span>Towers</span><span>'+count("tower")+'</span></div>' +
+    '<div class="rowline"><span>Knights</span><span>'+S.knights+'</span></div>' +
+    '<div class="rowline"><span><b>Total defence</b></span><span>'+defence()+'</span></div>' +
+    '<p style="font-size:13px">Next raid: '+(S.raidWarned ? '<b style="color:var(--red)">days away, strength about '+S.raidStrength+'</b>' : 'not yet sighted')+'.</p>';
+}
+function renderEstates(){
+  $("estateList").innerHTML = S.estates.map(function(es, idx){
+    if (!es.owned){
+      return '<div class="estate"><b>'+es.name+'</b> <span class="tag">'+es.cost+' honour</span><p>'+es.desc+'</p>' +
+        '<button data-claim="'+idx+'" '+(S.honour<es.cost?'disabled':'')+'>Swear them to your banner</button></div>';
+    }
+    var sends = Object.keys(es.sends).map(function(k){ return Math.round(es.sends[k]*(1+(es.lvl-1)*0.6))+" "+(FOODNAMES[k]||k); }).join(", ");
+    return '<div class="estate"><b>'+es.name+'</b> <span class="tag">Yours · level '+es.lvl+'</span><p>Sends: '+sends+'. Next cart in '+es.timer+' days.</p>' +
+      '<button data-upgrade="'+idx+'" '+(S.gold<60?'disabled':'')+'>Upgrade for 60 gold</button></div>';
+  }).join("");
+  var claims = document.querySelectorAll("[data-claim]");
+  for (var i=0;i<claims.length;i++) claims[i].addEventListener("click", function(){
+    var es = S.estates[+this.getAttribute("data-claim")];
+    if (S.honour>=es.cost){ S.honour-=es.cost; es.owned=true; es.timer=4; log(es.name+" swore fealty. Their carts will roll to your stockpile."); render(); }
+  });
+  var ups = document.querySelectorAll("[data-upgrade]");
+  for (var j=0;j<ups.length;j++) ups[j].addEventListener("click", function(){
+    var es2 = S.estates[+this.getAttribute("data-upgrade")];
+    if (S.gold>=60){ S.gold-=60; es2.lvl++; log(es2.name+" prospers under your rule. Its carts grow heavier."); render(); }
+  });
+}
+function renderFeast(){
+  $("honourBig").textContent = fmt(S.honour);
+  var ok = FOODS.every(function(f){ return S.food[f]>=8; });
+  $("feastReq").textContent = "A feast eats 8 each of bread, apples, cheese and meat, plus 30 gold for wine and candles. " +
+    (ok && S.gold>=30 ? "Your stores can carry it. The hall is ready." : "You are short: " +
+      FOODS.filter(function(f){ return S.food[f]<8; }).map(function(f){ return FOODNAMES[f].toLowerCase(); }).join(", ") +
+      (S.gold<30 ? (FOODS.some(function(f){return S.food[f]<8;})?", and gold":"gold") : "") + ".");
+  $("btnFeast").disabled = !(ok && S.gold>=30);
+  $("honourBox").innerHTML =
+    '<div class="rowline"><span>Estates sworn to you</span><span>'+S.estates.filter(function(e){return e.owned;}).length+' of 3</span></div>' +
+    '<div class="rowline"><span>Church honour</span><span>'+(count("church") ? "2 / month if content" : "no church yet")+'</span></div>';
+}
+function renderGoals(){
+  var goals = [
+    {t:"Feed them two kinds of food at once", done: foodTypes()>=2},
+    {t:"Grow to 25 people", done: S.pop>=25},
+    {t:"Put all four foods on the table", done: foodTypes()>=4},
+    {t:"Hold your first Lord's Feast", done: S.feastGlow>0 || S.honour>=45},
+    {t:"Claim your first estate", done: S.estates.some(function(e){return e.owned;})},
+    {t:"Raise defence to 20", done: defence()>=20},
+    {t:"Catch a thief (guards, and luck)", done: S.thievesCaught>0},
+    {t:"Grow to 50 people and claim all three estates", done: S.pop>=50 && S.estates.every(function(e){return e.owned;})}
+  ];
+  $("goals").innerHTML = goals.map(function(g){ return '<li class="'+(g.done?'done':'')+'">'+g.t+'</li>'; }).join("");
+}
+function renderDate(){
+  var seasons = ["Spring","Spring","Summer","Summer","Autumn","Autumn","Winter","Winter"];
+  var idx = Math.floor((S.day-1)/10) % 8;
+  var year = Math.floor((S.day-1)/80)+1;
+  $("dateLabel").textContent = seasons[idx] + ", Year " + year + " · Day " + S.day;
+  var b = $("raidBanner");
+  if (S.raidWarned){ b.className="banner show"; b.textContent = "Riders on the road: a raid is coming within days. Defence "+defence()+" against a force of about "+S.raidStrength+". Towers, walls, guards and knights, quickly."; }
+  else b.className="banner";
+}
+function renderSegs(){
+  $("taxSeg").innerHTML = TAXES.map(function(t,i){ return '<button data-tax="'+i+'" class="'+(S.tax===i?'on':'')+'">'+t.name+'</button>'; }).join("");
+  $("rationSeg").innerHTML = RATIONS.map(function(r,i){ return '<button data-ration="'+i+'" class="'+(S.ration===i?'on':'')+'">'+r.name+'</button>'; }).join("");
+  var tb = document.querySelectorAll("[data-tax]");
+  for (var i=0;i<tb.length;i++) tb[i].addEventListener("click", function(){ S.tax=+this.getAttribute("data-tax"); render(); });
+  var rb = document.querySelectorAll("[data-ration]");
+  for (var j=0;j<rb.length;j++) rb[j].addEventListener("click", function(){ S.ration=+this.getAttribute("data-ration"); render(); });
+}
+function renderBuild(){
+  $("buildGrid").innerHTML = BUILD_ORDER.map(function(key){
+    var d = B[key];
+    var cost = [];
+    if (d.w) cost.push(d.w+"w"); if (d.s) cost.push(d.s+"s"); if (d.g) cost.push(d.g+"g");
+    var afford = S.wood>=d.w && S.stone>=d.s && S.gold>=d.g;
+    return '<button class="bbtn'+(S.selected===key?' on':'')+'" data-build="'+key+'" '+(afford?'':'disabled')+'>' +
+      '<span class="sw" style="background:'+d.color+'"></span>' +
+      '<span><b>'+d.name+' <span class="cost">'+cost.join(" ")+'</span></b><span>'+d.desc+(d.workers?' Needs '+d.workers+' workers.':'')+'</span></span></button>';
+  }).join("");
+  var btns = document.querySelectorAll("[data-build]");
+  for (var i=0;i<btns.length;i++) btns[i].addEventListener("click", function(){
+    S.selected = this.getAttribute("data-build"); S.demolish=false;
+    $("btnDemolish").textContent = "Demolish mode: off";
+    $("selInfo").textContent = B[S.selected].name + " selected. Click a free grass tile to build.";
+    renderBuild();
+  });
+}
+function render(){
+  renderHUD(); renderFood(); renderJobs(); renderPopularity(); renderCrimeGarrison();
+  renderEstates(); renderFeast(); renderGoals(); renderDate(); renderSegs(); renderBuild(); drawMap();
+}
+
+/* ============ MAP DRAWING ============ */
+var cv = $("map"), ctx = cv.getContext("2d");
+var peasants = [];
+for (var pi=0; pi<24; pi++) peasants.push({x:Math.random()*COLS, y:Math.random()*ROWS, tx:0, ty:0, ph:Math.random()*6});
+var hover = null;
+function px(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(x,y,w,h); }
+function drawBuilding(b){
+  var x=b.x*TILE, y=b.y*TILE, d=B[b.type];
+  px(x+1,y+1,TILE-2,TILE-2,d.color);
+  if (b.type==="house"){ px(x+3,y+3,24,10,d.roof); px(x+12,y+16,7,12,"#4a2f18"); px(x+6,y+18,5,5,"#ffd873"); }
+  else if (b.type==="wheat"||b.type==="orchard"||b.type==="dairy"){
+    for (var i=0;i<4;i++) for (var j=0;j<3;j++) px(x+4+i*6, y+6+j*7, 3, 5, b.type==="wheat"?"#f4dc6a":b.type==="orchard"?"#c63b2a":"#f2ead2");
+    px(x+2,y+24,26,4,"rgba(0,0,0,.18)");
+  }
+  else if (b.type==="church"){ px(x+12,y+2,6,26,"#efe9da"); px(x+8,y+10,14,5,"#efe9da"); px(x+13,y+14,4,14,d.roof); }
+  else if (b.type==="tower"){ px(x+7,y+4,16,24,d.color); px(x+4,y+2,22,6,d.roof); px(x+13,y+12,4,6,"#2e2416"); }
+  else if (b.type==="wall"){ px(x,y+8,TILE,14,d.color); px(x+2,y+5,5,4,d.roof); px(x+12,y+5,5,4,d.roof); px(x+22,y+5,5,4,d.roof); }
+  else if (b.type==="stocks"){ px(x+5,y+18,20,5,d.roof); px(x+8,y+10,3,10,d.roof); px(x+19,y+10,3,10,d.roof); px(x+12,y+12,6,5,"#e8c39a"); }
+  else if (b.type==="guard"){ px(x+4,y+10,22,16,d.color); px(x+2,y+4,26,8,d.roof); px(x+13,y+17,5,9,"#2e2416"); }
+  else { px(x+4,y+12,22,14,d.color); px(x+2,y+5,26,9,d.roof); px(x+12,y+18,6,8,"#3a2a16"); }
+}
+function drawMap(){
+  for (var y=0;y<ROWS;y++) for (var x=0;x<COLS;x++){
+    var t = TER[y][x];
+    var base = (x+y)%2===0 ? "#79a844" : "#71a03e";
+    if (t===3) base = (x+y)%2===0 ? "#4a7fae" : "#4477a6";
+    px(x*TILE, y*TILE, TILE, TILE, base);
+    if (t===1){ px(x*TILE+11,y*TILE+14,5,10,"#5d3a1e"); px(x*TILE+5,y*TILE+4,20,13,"#3f7031"); px(x*TILE+9,y*TILE+1,12,8,"#4c8440"); }
+    if (t===2){ px(x*TILE+4,y*TILE+14,10,10,"#8f8f8a"); px(x*TILE+14,y*TILE+8,12,14,"#a3a39d"); px(x*TILE+8,y*TILE+18,16,8,"#7e7e79"); }
+    if (t===3){ px(x*TILE+4,y*TILE+10,9,2,"rgba(255,255,255,.35)"); px(x*TILE+16,y*TILE+20,9,2,"rgba(255,255,255,.3)"); }
+  }
+  /* Keep */
+  px(13*TILE,7*TILE,60,60,"#9b968c"); px(13*TILE,7*TILE,60,8,"#6e6a62");
+  px(13*TILE+6,7*TILE+14,14,22,"#7e7a70"); px(13*TILE+40,7*TILE+14,14,22,"#7e7a70");
+  px(13*TILE+24,7*TILE+34,12,26,"#4a3421"); px(13*TILE+26,7*TILE+10,8,10,"#c63b2a");
+  ctx.fillStyle="#2e2416"; ctx.font="10px monospace"; ctx.fillText("KEEP",13*TILE+20,7*TILE+56);
+  /* Buildings */
+  for (var i=0;i<S.buildings.length;i++) drawBuilding(S.buildings[i]);
+  /* Peasants */
+  var n = Math.min(S.pop, peasants.length);
+  for (var p=0;p<n;p++){
+    var pe = peasants[p];
+    px(Math.floor(pe.x*TILE)+12, Math.floor(pe.y*TILE)+12, 6, 8, p%3===0?"#b84a6e":p%3===1?"#4a6b8a":"#c47b3a");
+    px(Math.floor(pe.x*TILE)+13, Math.floor(pe.y*TILE)+8, 4, 4, "#e8c39a");
+  }
+  /* Hover ghost */
+  if (hover && S.selected){
+    var ok = canPlace(S.selected, hover.x, hover.y);
+    ctx.fillStyle = ok ? "rgba(255,255,255,.45)" : "rgba(200,40,30,.45)";
+    ctx.fillRect(hover.x*TILE, hover.y*TILE, TILE, TILE);
+  }
+  if (hover && S.demolish){
+    ctx.fillStyle = "rgba(200,40,30,.4)";
+    ctx.fillRect(hover.x*TILE, hover.y*TILE, TILE, TILE);
+  }
+}
+function canPlace(type,x,y){
+  if (x<0||y<0||x>=COLS||y>=ROWS) return false;
+  if (isKeep(x,y) || buildingAt(x,y)) return false;
+  if (TER[y][x]!==0) return false;
+  if (type==="quarry" && !nearTiles(x,y,2,1)) return false;
+  return true;
+}
+function tileFromEvent(ev){
+  var r = cv.getBoundingClientRect();
+  var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+  var cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top;
+  return {x: Math.floor(cx/r.width*COLS), y: Math.floor(cy/r.height*ROWS)};
+}
+cv.addEventListener("mousemove", function(ev){ hover = tileFromEvent(ev); drawMap(); });
+cv.addEventListener("mouseleave", function(){ hover=null; drawMap(); });
+cv.addEventListener("click", function(ev){
+  var t = tileFromEvent(ev);
+  if (S.demolish){
+    var bd = buildingAt(t.x,t.y);
+    if (bd){ S.buildings.splice(S.buildings.indexOf(bd),1); log("You had the "+B[bd.type].name.toLowerCase()+" pulled down. No refund: the timber was rotten anyway."); render(); }
+    return;
+  }
+  if (S.selected){
+    var d = B[S.selected];
+    if (!canPlace(S.selected,t.x,t.y)){
+      $("selInfo").textContent = S.selected==="quarry" ? "A quarry needs open grass right beside grey stone." : "Can't build there. Pick open grass, away from woods, stone, water and the keep.";
+      return;
+    }
+    if (S.wood<d.w || S.stone<d.s || S.gold<d.g){ $("selInfo").textContent = "Not enough resources for a "+d.name+"."; return; }
+    S.wood-=d.w; S.stone-=d.s; S.gold-=d.g;
+    addB(S.selected,t.x,t.y);
+    $("selInfo").textContent = d.name+" built. "+d.desc;
+    render();
+    return;
+  }
+  var b2 = buildingAt(t.x,t.y);
+  if (b2) $("selInfo").textContent = B[b2.type].name + ": " + B[b2.type].desc + (B[b2.type].workers ? " Employs "+B[b2.type].workers+"." : "");
+  else if (isKeep(t.x,t.y)) $("selInfo").textContent = "Your keep. Feasts are held in its hall (Feast tab), and frightened peasants run here when riders come.";
+  else $("selInfo").textContent = "Open land. Pick a building on the right to place something here.";
+});
+
+/* ============ CONTROLS ============ */
+function setSpeed(s){
+  S.speed = s;
+  $("btnPause").className = "sbtn"+(s===0?" on":"");
+  $("btnPlay").className = "sbtn"+(s===1?" on":"");
+  $("btnFast").className = "sbtn"+(s===2?" on":"");
+}
+$("btnPause").addEventListener("click", function(){ setSpeed(0); });
+$("btnPlay").addEventListener("click", function(){ setSpeed(1); });
+$("btnFast").addEventListener("click", function(){ setSpeed(2); });
+$("btnDemolish").addEventListener("click", function(){
+  S.demolish = !S.demolish; S.selected = null;
+  this.textContent = "Demolish mode: " + (S.demolish?"on":"off");
+  $("selInfo").textContent = S.demolish ? "Click a building to pull it down." : "Pick a building to place it.";
+  renderBuild();
+});
+$("btnFeast").addEventListener("click", function(){
+  var ok = FOODS.every(function(f){ return S.food[f]>=8; });
+  if (!ok || S.gold<30) return;
+  for (var i=0;i<FOODS.length;i++) S.food[FOODS[i]]-=8;
+  S.gold-=30; S.honour+=25; S.feastGlow=10;
+  log("The hall blazed with candles: four foods, wine, and music till dawn. +25 honour, and the village will talk of it for days.");
+  render();
+});
+$("btnJoust").addEventListener("click", function(){
+  if (S.honour<40) return;
+  S.honour-=40; S.joustGlow=10;
+  log("Knights splintered lances in your honour. The crowd loved every minute of it.");
+  render();
+});
+$("btnKnight").addEventListener("click", function(){
+  if (S.gold<50 || S.honour<5) { log("A knight needs 50 gold for horse and harness, and 5 honour to make the oath worth swearing."); return; }
+  S.gold-=50; S.honour-=5; S.knights++;
+  log("A knight swore his sword to Emberhold. Defence rises.");
+  render();
+});
+var tabs = document.querySelectorAll(".tab");
+for (var ti=0; ti<tabs.length; ti++) tabs[ti].addEventListener("click", function(){
+  for (var k=0;k<tabs.length;k++) tabs[k].classList.remove("on");
+  this.classList.add("on");
+  var panes = document.querySelectorAll(".pane");
+  for (var m=0;m<panes.length;m++) panes[m].classList.remove("on");
+  $("pane-"+this.getAttribute("data-tab")).classList.add("on");
+});
+
+/* ============ LOOPS ============ */
+var acc = 0, last = Date.now();
+setInterval(function(){
+  var now = Date.now(), dt = now-last; last = now;
+  if (S.speed===0) return;
+  acc += dt * (S.speed===2 ? 2.6 : 1);
+  while (acc >= 850){ acc -= 850; tick(); }
+}, 120);
+/* Peasant wander animation */
+setInterval(function(){
+  for (var i=0;i<peasants.length;i++){
+    var p = peasants[i];
+    if (Math.random()<0.02){ p.tx = 4+Math.random()*20; p.ty = 3+Math.random()*12; }
+    if (p.tx){ p.x += Math.sign(p.tx-p.x)*0.03; p.y += Math.sign(p.ty-p.y)*0.03; }
+  }
+  if (S.speed!==0 || true) drawMap();
+}, 140);
+
+render();
+</script>
+</body>
+</html>
